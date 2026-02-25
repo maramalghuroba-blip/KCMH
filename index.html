@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>KCMH DBT Research</title>
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+  background:#eef7f3;
+  color:#2f4f4f;
+}
+
+header{
+  text-align:center;
+  padding:30px 20px;
+  background:#dff3ea;
+  box-shadow:0 2px 10px rgba(0,0,0,0.05);
+}
+
+input{
+  margin-top:12px;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #b7e4d4;
+  width:240px;
+  font-size:16px;
+}
+
+.container{
+  max-width:900px;
+  margin:auto;
+  padding:30px;
+}
+
+.module{
+  border-radius:16px;
+  padding:25px;
+  margin-bottom:25px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.06);
+}
+
+.locked{ opacity:.5; pointer-events:none; }
+
+.mindfulness{ background:#e8f4ef; }
+.emotion{ background:#e6f3f3; }
+.distress{ background:#f3efe6; }
+.interpersonal{ background:#efe9f4; }
+
+.video-block{ margin-top:18px; }
+
+.locked-video{
+  opacity:.4;
+  pointer-events:none;
+}
+
+.badge{
+  background:#7ec8a9;
+  color:white;
+  padding:3px 10px;
+  border-radius:12px;
+  font-size:12px;
+  margin-left:8px;
+}
+
+.progress-bar{
+  height:10px;
+  background:#e0f2ea;
+  border-radius:10px;
+  margin-top:15px;
+  overflow:hidden;
+}
+
+.progress-fill{
+  height:100%;
+  width:0%;
+  background:#7ec8a9;
+  transition:.4s ease;
+}
+
+.percent{ font-size:14px; margin-top:6px; }
+.icon{ font-size:22px; margin-right:8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>KCMH DBT Research</h1>
+  <input id="code" placeholder="Enter participant code">
+</header>
+
+<div class="container">
+
+<!-- MINDFULNESS -->
+<div class="module mindfulness" id="module1">
+<h2><span class="icon">🧘</span>Mindfulness</h2>
+
+<div class="video-block">
+<p><strong>Video 1:</strong> Intro to What Skills
+<span id="c1" class="badge" style="display:none;">✓</span></p>
+<div id="player1"></div>
+</div>
+
+<div class="video-block locked-video" id="v2block">
+<p><strong>Video 2:</strong> What Skill: Observe
+<span id="c2" class="badge" style="display:none;">✓</span></p>
+<div id="player2"></div>
+</div>
+
+<div class="progress-bar"><div id="bar1" class="progress-fill"></div></div>
+<div id="p1" class="percent">0%</div>
+</div>
+
+<!-- EMOTION REGULATION -->
+<div class="module emotion locked" id="module2">
+<h2><span class="icon">🌿</span>Emotion Regulation</h2>
+<p>Unlocked after completing Mindfulness</p>
+</div>
+
+</div>
+
+<script>
+const vids={
+  player1:"gfvzWq8eW6s",
+  player2:"PZBlkmMbzwI"
+};
+
+let players={};
+
+function onYouTubeIframeAPIReady(){
+  for(let id in vids){
+    players[id]=new YT.Player(id,{
+      height:"360",
+      width:"100%",
+      videoId:vids[id],
+      playerVars:{rel:0,modestbranding:1}
+    });
+  }
+  setInterval(track,1000);
+}
+
+/* RESUME when code entered */
+document.getElementById("code").addEventListener("change",()=>{
+  const code=document.getElementById("code").value.trim();
+  if(!code) return;
+  restoreState(code);
+});
+
+/* TRACK PROGRESS */
+function track(){
+  const code=document.getElementById("code").value.trim();
+  if(!code) return;
+
+  let completed=0;
+
+  const p1=players.player1;
+  if(p1 && p1.getDuration){
+    let d=p1.getDuration();
+    let percent=(p1.getCurrentTime()/d)*100;
+    let saved=parseFloat(localStorage.getItem(code+"_v1"))||0;
+
+    if(percent>saved+5){
+      p1.seekTo(saved/100*d,true);
+    } else {
+      localStorage.setItem(code+"_v1",percent);
+    }
+
+    if(percent>90){
+      document.getElementById("c1").style.display="inline";
+      unlockVideo2();
+      completed++;
+    }
+  }
+
+  const p2=players.player2;
+  if(p2 && p2.getDuration){
+    let d=p2.getDuration();
+    let percent=(p2.getCurrentTime()/d)*100;
+    let saved=parseFloat(localStorage.getItem(code+"_v2"))||0;
+
+    if(percent>saved+5){
+      p2.seekTo(saved/100*d,true);
+    } else {
+      localStorage.setItem(code+"_v2",percent);
+    }
+
+    if(percent>90){
+      document.getElementById("c2").style.display="inline";
+      completed++;
+    }
+  }
+
+  let progress=(completed/2)*100;
+  document.getElementById("bar1").style.width=progress+"%";
+  document.getElementById("p1").innerText=Math.round(progress)+"% complete";
+
+  if(progress===100){
+    unlockModule2();
+    localStorage.setItem(code+"_mindfulness_complete",true);
+  }
+}
+
+/* RESTORE */
+function restoreState(code){
+  if(localStorage.getItem(code+"_v1")>90){
+    document.getElementById("c1").style.display="inline";
+    unlockVideo2();
+  }
+
+  if(localStorage.getItem(code+"_v2")>90){
+    document.getElementById("c2").style.display="inline";
+  }
+
+  if(localStorage.getItem(code+"_mindfulness_complete")){
+    unlockModule2();
+  }
+
+  resumeVideos(code);
+}
+
+function resumeVideos(code){
+  const p1=players.player1;
+  const p2=players.player2;
+
+  if(p1 && p1.getDuration){
+    let s=localStorage.getItem(code+"_v1");
+    if(s){
+      let d=p1.getDuration();
+      p1.seekTo(d*(s/100),true);
+    }
+  }
+
+  if(p2 && p2.getDuration){
+    let s=localStorage.getItem(code+"_v2");
+    if(s){
+      let d=p2.getDuration();
+      p2.seekTo(d*(s/100),true);
+    }
+  }
+}
+
+function unlockVideo2(){
+  document.getElementById("v2block").classList.remove("locked-video");
+}
+
+function unlockModule2(){
+  document.getElementById("module2").classList.remove("locked");
+}
+</script>
+
+</body>
+</html>

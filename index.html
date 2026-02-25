@@ -3,247 +3,81 @@
 <head>
 <meta charset="UTF-8">
 <title>KCMH DBT Research</title>
-<script src="https://www.youtube.com/iframe_api"></script>
 
 <style>
 body{
-  margin:0;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
   background:#eef7f3;
-  color:#2f4f4f;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  margin:0;
 }
 
-header{
+.card{
+  background:white;
+  padding:40px;
+  border-radius:18px;
   text-align:center;
-  padding:30px 20px;
-  background:#dff3ea;
+  box-shadow:0 8px 20px rgba(0,0,0,0.08);
+}
+
+h1{
+  margin-bottom:10px;
 }
 
 input{
-  margin-top:12px;
-  padding:10px;
+  margin-top:20px;
+  padding:12px;
+  width:220px;
   border-radius:8px;
   border:1px solid #b7e4d4;
-  width:240px;
   font-size:16px;
 }
 
-.container{
-  max-width:900px;
-  margin:auto;
-  padding:30px;
-}
-
-.module{
-  border-radius:16px;
-  padding:25px;
-  margin-bottom:25px;
-  box-shadow:0 6px 18px rgba(0,0,0,0.06);
-}
-
-.locked{
-  opacity:.5;
-  pointer-events:none;
-}
-
-.mindfulness{ background:#e8f4ef; }
-.emotion{ background:#e6f3f3; }
-.distress{ background:#f3efe6; }
-.interpersonal{ background:#efe9f4; }
-
-.video-block{ margin-top:18px; }
-
-.locked-video{
-  opacity:.4;
-  pointer-events:none;
-}
-
-.badge{
+button{
+  margin-top:20px;
+  padding:12px 30px;
+  border:none;
+  border-radius:8px;
   background:#7ec8a9;
   color:white;
-  padding:3px 10px;
-  border-radius:12px;
-  font-size:12px;
-  margin-left:8px;
+  font-size:16px;
+  cursor:pointer;
 }
 
-.progress-bar{
-  height:10px;
-  background:#e0f2ea;
-  border-radius:10px;
-  margin-top:15px;
-  overflow:hidden;
+button:hover{
+  background:#69b89a;
 }
-
-.progress-fill{
-  height:100%;
-  width:0%;
-  background:#7ec8a9;
-  transition:.4s ease;
-}
-
-.percent{ font-size:14px; margin-top:6px; }
-.icon{ font-size:22px; margin-right:8px; }
 </style>
 </head>
 <body>
 
-<header>
+<div class="card">
   <h1>KCMH DBT Research</h1>
-  <input id="code" placeholder="Enter participant code">
-</header>
+  <p>Please enter your participant code</p>
 
-<div class="container">
+  <input id="code" placeholder="Participant Code">
 
-<!-- MINDFULNESS -->
-<div class="module mindfulness">
-<h2>🧘 Mindfulness</h2>
-
-<div class="video-block" id="block1">
-<p>
-<strong>Video 1:</strong> Intro to What Skills
-<span id="c1" class="badge" style="display:none;">✓</span>
-</p>
-<div id="player1"></div>
-</div>
-
-<div class="video-block locked-video" id="block2">
-<p>
-<strong>Video 2:</strong> What Skill: Observe
-<span id="c2" class="badge" style="display:none;">✓</span>
-</p>
-<div id="player2"></div>
-</div>
-
-<div class="progress-bar"><div id="bar1" class="progress-fill"></div></div>
-<div id="p1" class="percent">0%</div>
-</div>
-
-<!-- EMOTION REGULATION -->
-<div class="module emotion locked" id="module2">
-<h2>🌿 Emotion Regulation</h2>
-<p>Unlocks after Mindfulness completion</p>
-</div>
-
-<!-- DISTRESS TOLERANCE -->
-<div class="module distress locked" id="module3">
-<h2>🪨 Distress Tolerance</h2>
-<p>Locked</p>
-</div>
-
-<!-- INTERPERSONAL EFFECTIVENESS -->
-<div class="module interpersonal locked" id="module4">
-<h2>🤝 Interpersonal Effectiveness</h2>
-<p>Locked</p>
-</div>
-
+  <br>
+  <button onclick="continueToPlatform()">Continue</button>
 </div>
 
 <script>
-const vids={
-  player1:"gfvzWq8eW6s",
-  player2:"PZBlkmMbzwI"
-};
-
-let players={};
-let isRestoring=false;
-
-/* load players */
-function onYouTubeIframeAPIReady(){
-  Object.keys(vids).forEach(id=>{
-    players[id]=new YT.Player(id,{
-      height:"360",
-      width:"100%",
-      videoId:vids[id],
-      playerVars:{rel:0,modestbranding:1},
-      events:{ onStateChange:(e)=>handleStateChange(e,id) }
-    });
-  });
-  setInterval(track,1000);
-}
-
-/* prevent multiple playback */
-function handleStateChange(event,current){
-  if(isRestoring) return;
-  if(event.data===YT.PlayerState.PLAYING){
-    Object.keys(players).forEach(id=>{
-      if(id!==current) players[id].pauseVideo();
-    });
-  }
-}
-
-/* restore when code entered */
-document.getElementById("code").addEventListener("change",()=>{
+function continueToPlatform(){
   const code=document.getElementById("code").value.trim();
-  if(!code) return;
-  restoreState(code);
-});
 
-function track(){
-  const code=document.getElementById("code").value.trim();
-  if(!code) return;
-
-  let completed=0;
-
-  Object.keys(players).forEach((id,index)=>{
-    const p=players[id];
-    if(!p.getDuration) return;
-
-    let d=p.getDuration();
-    if(!d) return;
-
-    let percent=(p.getCurrentTime()/d)*100;
-    let saved=parseFloat(localStorage.getItem(code+"_"+id))||0;
-
-    if(percent>saved+5){
-      p.seekTo(saved/100*d,true);
-    } else {
-      localStorage.setItem(code+"_"+id,percent);
-    }
-
-    if(percent>90){
-      document.getElementById("c"+(index+1)).style.display="inline";
-      completed++;
-      if(id==="player1"){
-        document.getElementById("block2").classList.remove("locked-video");
-      }
-    }
-  });
-
-  let progress=(completed/2)*100;
-  document.getElementById("bar1").style.width=progress+"%";
-  document.getElementById("p1").innerText=Math.round(progress)+"% complete";
-
-  if(progress===100){
-    document.getElementById("module2").classList.remove("locked");
-    localStorage.setItem(code+"_mindfulness_complete",true);
-  }
-}
-
-function restoreState(code){
-  isRestoring=true;
-
-  Object.keys(players).forEach((id,index)=>{
-    let saved=localStorage.getItem(code+"_"+id);
-    if(saved && players[id].getDuration){
-      let d=players[id].getDuration();
-      players[id].seekTo(d*(saved/100),false);
-      players[id].pauseVideo();
-    }
-
-    if(saved>90){
-      document.getElementById("c"+(index+1)).style.display="inline";
-      if(id==="player1"){
-        document.getElementById("block2").classList.remove("locked-video");
-      }
-    }
-  });
-
-  if(localStorage.getItem(code+"_mindfulness_complete")){
-    document.getElementById("module2").classList.remove("locked");
+  if(!code){
+    alert("Please enter your participant code");
+    return;
   }
 
-  setTimeout(()=>{ isRestoring=false; },1000);
+  // store current session code
+  sessionStorage.setItem("participant_code", code);
+
+  // redirect to learning page
+  window.location.href="learning.html";
 }
 </script>
 

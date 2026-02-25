@@ -17,7 +17,6 @@ header{
   text-align:center;
   padding:30px 20px;
   background:#dff3ea;
-  box-shadow:0 2px 10px rgba(0,0,0,0.05);
 }
 
 input{
@@ -42,10 +41,15 @@ input{
   box-shadow:0 6px 18px rgba(0,0,0,0.06);
 }
 
-.locked{ opacity:.5; pointer-events:none; }
+.locked{
+  opacity:.5;
+  pointer-events:none;
+}
 
 .mindfulness{ background:#e8f4ef; }
 .emotion{ background:#e6f3f3; }
+.distress{ background:#f3efe6; }
+.interpersonal{ background:#efe9f4; }
 
 .video-block{ margin-top:18px; }
 
@@ -59,12 +63,6 @@ input{
   color:white;
   padding:3px 10px;
   border-radius:12px;
-  font-size:12px;
-  margin-left:8px;
-}
-
-.continue{
-  color:#2f4f4f;
   font-size:12px;
   margin-left:8px;
 }
@@ -98,14 +96,13 @@ input{
 <div class="container">
 
 <!-- MINDFULNESS -->
-<div class="module mindfulness" id="module1">
-<h2><span class="icon">🧘</span>Mindfulness</h2>
+<div class="module mindfulness">
+<h2>🧘 Mindfulness</h2>
 
 <div class="video-block" id="block1">
 <p>
 <strong>Video 1:</strong> Intro to What Skills
 <span id="c1" class="badge" style="display:none;">✓</span>
-<span id="continue1" class="continue" style="display:none;">Continue watching</span>
 </p>
 <div id="player1"></div>
 </div>
@@ -114,7 +111,6 @@ input{
 <p>
 <strong>Video 2:</strong> What Skill: Observe
 <span id="c2" class="badge" style="display:none;">✓</span>
-<span id="continue2" class="continue" style="display:none;">Continue watching</span>
 </p>
 <div id="player2"></div>
 </div>
@@ -125,8 +121,20 @@ input{
 
 <!-- EMOTION REGULATION -->
 <div class="module emotion locked" id="module2">
-<h2><span class="icon">🌿</span>Emotion Regulation</h2>
-<p>Unlocked after completing Mindfulness</p>
+<h2>🌿 Emotion Regulation</h2>
+<p>Unlocks after Mindfulness completion</p>
+</div>
+
+<!-- DISTRESS TOLERANCE -->
+<div class="module distress locked" id="module3">
+<h2>🪨 Distress Tolerance</h2>
+<p>Locked</p>
+</div>
+
+<!-- INTERPERSONAL EFFECTIVENESS -->
+<div class="module interpersonal locked" id="module4">
+<h2>🤝 Interpersonal Effectiveness</h2>
+<p>Locked</p>
 </div>
 
 </div>
@@ -138,31 +146,29 @@ const vids={
 };
 
 let players={};
-let lastVideo=null;
+let isRestoring=false;
 
+/* load players */
 function onYouTubeIframeAPIReady(){
-  for(let id in vids){
+  Object.keys(vids).forEach(id=>{
     players[id]=new YT.Player(id,{
       height:"360",
       width:"100%",
       videoId:vids[id],
       playerVars:{rel:0,modestbranding:1},
-      events:{
-        onStateChange:onPlayerStateChange
-      }
+      events:{ onStateChange:(e)=>handleStateChange(e,id) }
     });
-  }
+  });
   setInterval(track,1000);
 }
 
-/* pause others when one plays */
-function onPlayerStateChange(event){
+/* prevent multiple playback */
+function handleStateChange(event,current){
+  if(isRestoring) return;
   if(event.data===YT.PlayerState.PLAYING){
-    for(let id in players){
-      if(players[id]!==event.target){
-        players[id].pauseVideo();
-      }
-    }
+    Object.keys(players).forEach(id=>{
+      if(id!==current) players[id].pauseVideo();
+    });
   }
 }
 
@@ -195,14 +201,12 @@ function track(){
       localStorage.setItem(code+"_"+id,percent);
     }
 
-    if(percent>5){
-      localStorage.setItem(code+"_lastVideo",id);
-    }
-
     if(percent>90){
       document.getElementById("c"+(index+1)).style.display="inline";
       completed++;
-      if(id==="player1") unlockVideo2();
+      if(id==="player1"){
+        document.getElementById("block2").classList.remove("locked-video");
+      }
     }
   });
 
@@ -211,63 +215,35 @@ function track(){
   document.getElementById("p1").innerText=Math.round(progress)+"% complete";
 
   if(progress===100){
-    unlockModule2();
+    document.getElementById("module2").classList.remove("locked");
+    localStorage.setItem(code+"_mindfulness_complete",true);
   }
 }
 
-/* restore state */
 function restoreState(code){
+  isRestoring=true;
 
-  const last = localStorage.getItem(code+"_lastVideo");
-
-  if(localStorage.getItem(code+"_player1")>90){
-    document.getElementById("c1").style.display="inline";
-    unlockVideo2();
-  }
-
-  if(localStorage.getItem(code+"_player2")>90){
-    document.getElementById("c2").style.display="inline";
-  }
-
-  if(last){
-    document.getElementById("continue"+last.slice(-1)).style.display="inline";
-
-    setTimeout(()=>{
-      document.getElementById("block"+last.slice(-1)).scrollIntoView({
-        behavior:"smooth",
-        block:"center"
-      });
-    },800);
-  }
-
-  resumeLastVideo(code,last);
-
-  if(localStorage.getItem(code+"_player2")>90){
-    unlockModule2();
-  }
-}
-
-/* resume ONLY last video */
-function resumeLastVideo(code,last){
-  if(!last) return;
-
-  const p=players[last];
-  if(p && p.getDuration){
-    let saved=localStorage.getItem(code+"_"+last);
-    if(saved){
-      let d=p.getDuration();
-      p.seekTo(d*(saved/100),false);
-      p.pauseVideo();
+  Object.keys(players).forEach((id,index)=>{
+    let saved=localStorage.getItem(code+"_"+id);
+    if(saved && players[id].getDuration){
+      let d=players[id].getDuration();
+      players[id].seekTo(d*(saved/100),false);
+      players[id].pauseVideo();
     }
+
+    if(saved>90){
+      document.getElementById("c"+(index+1)).style.display="inline";
+      if(id==="player1"){
+        document.getElementById("block2").classList.remove("locked-video");
+      }
+    }
+  });
+
+  if(localStorage.getItem(code+"_mindfulness_complete")){
+    document.getElementById("module2").classList.remove("locked");
   }
-}
 
-function unlockVideo2(){
-  document.getElementById("block2").classList.remove("locked-video");
-}
-
-function unlockModule2(){
-  document.getElementById("module2").classList.remove("locked");
+  setTimeout(()=>{ isRestoring=false; },1000);
 }
 </script>
 

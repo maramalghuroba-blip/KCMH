@@ -25,7 +25,6 @@ header{
   padding:30px;
 }
 
-/* MODULE STYLES */
 .module{
   padding:25px;
   border-radius:16px;
@@ -55,6 +54,12 @@ header{
   font-size:12px;
 }
 
+.continue{
+  font-size:12px;
+  color:#2f4f4f;
+  margin-left:8px;
+}
+
 .progress-bar{
   height:10px;
   background:#e0f2ea;
@@ -82,18 +87,20 @@ header{
 <div class="container">
 
 <!-- MINDFULNESS -->
-<div class="module mindfulness" id="module1">
+<div class="module mindfulness">
 <h3>🧘 Mindfulness</h3>
 
 <div class="video-block">
 <strong>Video 1: Intro to What Skills</strong>
 <span id="c1" class="badge" style="display:none;">✓</span>
+<span id="continue1" class="continue" style="display:none;">Continue watching</span>
 <div id="player1"></div>
 </div>
 
 <div class="video-block" id="video2block" style="opacity:.4; pointer-events:none;">
 <strong>Video 2: What Skill: Observe</strong>
 <span id="c2" class="badge" style="display:none;">✓</span>
+<span id="continue2" class="continue" style="display:none;">Continue watching</span>
 <div id="player2"></div>
 </div>
 
@@ -101,20 +108,18 @@ header{
 <div id="percent1" class="percent">0%</div>
 </div>
 
-<!-- EMOTION REGULATION -->
+<!-- OTHER MODULES -->
 <div class="module emotion locked" id="module2">
 <h3>🌿 Emotion Regulation</h3>
-<p>Unlocks after completing Mindfulness</p>
+<p>Unlocks after Mindfulness completion</p>
 </div>
 
-<!-- DISTRESS TOLERANCE -->
-<div class="module distress locked" id="module3">
+<div class="module distress locked">
 <h3>🪨 Distress Tolerance</h3>
 <p>Locked</p>
 </div>
 
-<!-- INTERPERSONAL EFFECTIVENESS -->
-<div class="module interpersonal locked" id="module4">
+<div class="module interpersonal locked">
 <h3>🤝 Interpersonal Effectiveness</h3>
 <p>Locked</p>
 </div>
@@ -123,12 +128,9 @@ header{
 
 <script>
 const code = sessionStorage.getItem("participant_code");
+if(!code) window.location.href="index.html";
 
-if(!code){
-  window.location.href="index.html";
-}
-
-document.getElementById("participant").innerText = "Participant: " + code;
+document.getElementById("participant").innerText="Participant: "+code;
 
 const videos={
   player1:"gfvzWq8eW6s",
@@ -136,24 +138,31 @@ const videos={
 };
 
 let players={};
-let restoring=false;
+let readyCount=0;
 
-/* Load YouTube Players */
+/* LOAD PLAYERS */
 function onYouTubeIframeAPIReady(){
   Object.keys(videos).forEach(id=>{
     players[id]=new YT.Player(id,{
       height:"360",
       width:"100%",
       videoId:videos[id],
-      events:{ onStateChange:e=>handlePlay(e,id) }
+      events:{
+        onReady:onReady,
+        onStateChange:e=>handlePlay(e,id)
+      }
     });
   });
-
-  setTimeout(restoreState,1500);
-  setInterval(trackProgress,1000);
 }
 
-/* Prevent multiple videos playing */
+function onReady(){
+  readyCount++;
+  if(readyCount===Object.keys(players).length){
+    restoreProgress();
+  }
+}
+
+/* allow only one video playing */
 function handlePlay(e,current){
   if(e.data===YT.PlayerState.PLAYING){
     Object.keys(players).forEach(id=>{
@@ -162,30 +171,24 @@ function handlePlay(e,current){
   }
 }
 
-/* Track progress */
-function trackProgress(){
-  let completed=0;
-
-  Object.keys(players).forEach((id,index)=>{
+/* TRACK PROGRESS */
+setInterval(()=>{
+  Object.keys(players).forEach((id,i)=>{
     const p=players[id];
     if(!p.getDuration) return;
 
-    let duration=p.getDuration();
-    if(!duration) return;
+    const time=p.getCurrentTime();
+    const duration=p.getDuration();
 
-    let percent=(p.getCurrentTime()/duration)*100;
-    let saved=parseFloat(localStorage.getItem(code+"_"+id))||0;
-
-    if(percent>saved+5){
-      p.seekTo(saved/100*duration,true);
-    } else {
-      localStorage.setItem(code+"_"+id,percent);
+    if(time>1){
+      localStorage.setItem(code+"_lastVideo",id);
+      localStorage.setItem(code+"_"+id+"_time",time);
     }
 
-    if(percent>90){
-      document.getElementById("c"+(index+1)).style.display="inline";
-      completed++;
+    const percent=(time/duration)*100;
 
+    if(percent>90){
+      document.getElementById("c"+(i+1)).style.display="inline";
       if(id==="player1"){
         document.getElementById("video2block").style.opacity="1";
         document.getElementById("video2block").style.pointerEvents="auto";
@@ -193,38 +196,51 @@ function trackProgress(){
     }
   });
 
-  let progress=(completed/2)*100;
+  updateModuleProgress();
+},1000);
+
+/* UPDATE PROGRESS BAR */
+function updateModuleProgress(){
+  let completed=0;
+  if(localStorage.getItem(code+"_player1_time") &&
+     players.player1.getCurrentTime()/players.player1.getDuration()>0.9)
+     completed++;
+  if(localStorage.getItem(code+"_player2_time") &&
+     players.player2.getCurrentTime()/players.player2.getDuration()>0.9)
+     completed++;
+
+  const progress=(completed/2)*100;
   document.getElementById("bar1").style.width=progress+"%";
   document.getElementById("percent1").innerText=Math.round(progress)+"% complete";
 
   if(progress===100){
     document.getElementById("module2").classList.remove("locked");
-    localStorage.setItem(code+"_mindfulness_complete",true);
   }
 }
 
-/* Restore progress */
-function restoreState(){
-  Object.keys(players).forEach((id,index)=>{
-    let saved=localStorage.getItem(code+"_"+id);
-    if(saved){
-      let d=players[id].getDuration();
-      players[id].seekTo(d*(saved/100),false);
-      players[id].pauseVideo();
-    }
+/* RESTORE PROGRESS */
+function restoreProgress(){
+  const last=localStorage.getItem(code+"_lastVideo");
 
-    if(saved>90){
-      document.getElementById("c"+(index+1)).style.display="inline";
-      if(id==="player1"){
-        document.getElementById("video2block").style.opacity="1";
-        document.getElementById("video2block").style.pointerEvents="auto";
-      }
+  Object.keys(players).forEach((id,i)=>{
+    const saved=localStorage.getItem(code+"_"+id+"_time");
+    if(saved){
+      players[id].seekTo(parseFloat(saved),false);
+      players[id].pauseVideo();
+      document.getElementById("continue"+(i+1)).style.display="inline";
     }
   });
 
-  if(localStorage.getItem(code+"_mindfulness_complete")){
-    document.getElementById("module2").classList.remove("locked");
+  if(last){
+    setTimeout(()=>{
+      document.getElementById(last).scrollIntoView({
+        behavior:"smooth",
+        block:"center"
+      });
+    },500);
   }
+
+  updateModuleProgress();
 }
 </script>
 

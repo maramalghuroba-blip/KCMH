@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Learning Platform</title>
+<title>KCMH DBT Research</title>
 <script src="https://www.youtube.com/iframe_api"></script>
 
 <style>
@@ -25,12 +25,18 @@ header{
   padding:30px;
 }
 
+/* MODULE STYLES */
 .module{
-  background:#e8f4ef;
   padding:25px;
   border-radius:16px;
   margin-bottom:25px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.06);
 }
+
+.mindfulness{ background:#e8f4ef; }
+.emotion{ background:#e6f3f3; }
+.distress{ background:#f3efe6; }
+.interpersonal{ background:#efe9f4; }
 
 .locked{
   opacity:.5;
@@ -69,35 +75,62 @@ header{
 <body>
 
 <header>
-  <h2>Mindfulness Module</h2>
+  <h2>KCMH DBT Research</h2>
   <div id="participant"></div>
 </header>
 
 <div class="container">
 
-<div class="module">
-<p><strong>Video 1</strong> <span id="c1" class="badge" style="display:none;">✓</span></p>
+<!-- MINDFULNESS -->
+<div class="module mindfulness" id="module1">
+<h3>🧘 Mindfulness</h3>
+
+<div class="video-block">
+<strong>Video 1: Intro to What Skills</strong>
+<span id="c1" class="badge" style="display:none;">✓</span>
 <div id="player1"></div>
+</div>
 
-<p><strong>Video 2</strong> <span id="c2" class="badge" style="display:none;">✓</span></p>
+<div class="video-block" id="video2block" style="opacity:.4; pointer-events:none;">
+<strong>Video 2: What Skill: Observe</strong>
+<span id="c2" class="badge" style="display:none;">✓</span>
 <div id="player2"></div>
+</div>
 
-<div class="progress-bar"><div id="bar" class="progress-fill"></div></div>
-<div id="percent" class="percent">0%</div>
+<div class="progress-bar"><div id="bar1" class="progress-fill"></div></div>
+<div id="percent1" class="percent">0%</div>
+</div>
+
+<!-- EMOTION REGULATION -->
+<div class="module emotion locked" id="module2">
+<h3>🌿 Emotion Regulation</h3>
+<p>Unlocks after completing Mindfulness</p>
+</div>
+
+<!-- DISTRESS TOLERANCE -->
+<div class="module distress locked" id="module3">
+<h3>🪨 Distress Tolerance</h3>
+<p>Locked</p>
+</div>
+
+<!-- INTERPERSONAL EFFECTIVENESS -->
+<div class="module interpersonal locked" id="module4">
+<h3>🤝 Interpersonal Effectiveness</h3>
+<p>Locked</p>
 </div>
 
 </div>
 
 <script>
-const code=sessionStorage.getItem("participant_code");
+const code = sessionStorage.getItem("participant_code");
 
 if(!code){
   window.location.href="index.html";
 }
 
-document.getElementById("participant").innerText="Participant: "+code;
+document.getElementById("participant").innerText = "Participant: " + code;
 
-const vids={
+const videos={
   player1:"gfvzWq8eW6s",
   player2:"PZBlkmMbzwI"
 };
@@ -105,20 +138,22 @@ const vids={
 let players={};
 let restoring=false;
 
+/* Load YouTube Players */
 function onYouTubeIframeAPIReady(){
-  Object.keys(vids).forEach(id=>{
+  Object.keys(videos).forEach(id=>{
     players[id]=new YT.Player(id,{
       height:"360",
       width:"100%",
-      videoId:vids[id],
-      events:{ onStateChange:e=>handlePlay(e,id)}
+      videoId:videos[id],
+      events:{ onStateChange:e=>handlePlay(e,id) }
     });
   });
 
-  setTimeout(()=>restoreState(),1500);
-  setInterval(track,1000);
+  setTimeout(restoreState,1500);
+  setInterval(trackProgress,1000);
 }
 
+/* Prevent multiple videos playing */
 function handlePlay(e,current){
   if(e.data===YT.PlayerState.PLAYING){
     Object.keys(players).forEach(id=>{
@@ -127,43 +162,69 @@ function handlePlay(e,current){
   }
 }
 
-function track(){
+/* Track progress */
+function trackProgress(){
   let completed=0;
 
-  Object.keys(players).forEach((id,i)=>{
+  Object.keys(players).forEach((id,index)=>{
     const p=players[id];
     if(!p.getDuration) return;
 
-    let d=p.getDuration();
-    let percent=(p.getCurrentTime()/d)*100;
+    let duration=p.getDuration();
+    if(!duration) return;
+
+    let percent=(p.getCurrentTime()/duration)*100;
     let saved=parseFloat(localStorage.getItem(code+"_"+id))||0;
 
     if(percent>saved+5){
-      p.seekTo(saved/100*d,true);
+      p.seekTo(saved/100*duration,true);
     } else {
       localStorage.setItem(code+"_"+id,percent);
     }
 
     if(percent>90){
-      document.getElementById("c"+(i+1)).style.display="inline";
+      document.getElementById("c"+(index+1)).style.display="inline";
       completed++;
+
+      if(id==="player1"){
+        document.getElementById("video2block").style.opacity="1";
+        document.getElementById("video2block").style.pointerEvents="auto";
+      }
     }
   });
 
   let progress=(completed/2)*100;
-  document.getElementById("bar").style.width=progress+"%";
-  document.getElementById("percent").innerText=Math.round(progress)+"% complete";
+  document.getElementById("bar1").style.width=progress+"%";
+  document.getElementById("percent1").innerText=Math.round(progress)+"% complete";
+
+  if(progress===100){
+    document.getElementById("module2").classList.remove("locked");
+    localStorage.setItem(code+"_mindfulness_complete",true);
+  }
 }
 
+/* Restore progress */
 function restoreState(){
-  Object.keys(players).forEach(id=>{
+  Object.keys(players).forEach((id,index)=>{
     let saved=localStorage.getItem(code+"_"+id);
     if(saved){
       let d=players[id].getDuration();
       players[id].seekTo(d*(saved/100),false);
       players[id].pauseVideo();
     }
+
+    if(saved>90){
+      document.getElementById("c"+(index+1)).style.display="inline";
+      if(id==="player1"){
+        document.getElementById("video2block").style.opacity="1";
+        document.getElementById("video2block").style.pointerEvents="auto";
+      }
+    }
   });
+
+  if(localStorage.getItem(code+"_mindfulness_complete")){
+    document.getElementById("module2").classList.remove("locked");
+  }
 }
 </script>
 

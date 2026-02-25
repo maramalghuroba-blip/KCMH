@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Learning Platform</title>
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<style>
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+  background:#eef7f3;
+  color:#2f4f4f;
+}
+
+header{
+  text-align:center;
+  padding:25px;
+  background:#dff3ea;
+}
+
+.container{
+  max-width:900px;
+  margin:auto;
+  padding:30px;
+}
+
+.module{
+  background:#e8f4ef;
+  padding:25px;
+  border-radius:16px;
+  margin-bottom:25px;
+}
+
+.locked{
+  opacity:.5;
+  pointer-events:none;
+}
+
+.video-block{
+  margin-top:15px;
+}
+
+.badge{
+  background:#7ec8a9;
+  color:white;
+  padding:3px 10px;
+  border-radius:12px;
+  font-size:12px;
+}
+
+.progress-bar{
+  height:10px;
+  background:#e0f2ea;
+  border-radius:10px;
+  margin-top:15px;
+  overflow:hidden;
+}
+
+.progress-fill{
+  height:100%;
+  width:0%;
+  background:#7ec8a9;
+}
+
+.percent{ margin-top:6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h2>Mindfulness Module</h2>
+  <div id="participant"></div>
+</header>
+
+<div class="container">
+
+<div class="module">
+<p><strong>Video 1</strong> <span id="c1" class="badge" style="display:none;">✓</span></p>
+<div id="player1"></div>
+
+<p><strong>Video 2</strong> <span id="c2" class="badge" style="display:none;">✓</span></p>
+<div id="player2"></div>
+
+<div class="progress-bar"><div id="bar" class="progress-fill"></div></div>
+<div id="percent" class="percent">0%</div>
+</div>
+
+</div>
+
+<script>
+const code=sessionStorage.getItem("participant_code");
+
+if(!code){
+  window.location.href="index.html";
+}
+
+document.getElementById("participant").innerText="Participant: "+code;
+
+const vids={
+  player1:"gfvzWq8eW6s",
+  player2:"PZBlkmMbzwI"
+};
+
+let players={};
+let restoring=false;
+
+function onYouTubeIframeAPIReady(){
+  Object.keys(vids).forEach(id=>{
+    players[id]=new YT.Player(id,{
+      height:"360",
+      width:"100%",
+      videoId:vids[id],
+      events:{ onStateChange:e=>handlePlay(e,id)}
+    });
+  });
+
+  setTimeout(()=>restoreState(),1500);
+  setInterval(track,1000);
+}
+
+function handlePlay(e,current){
+  if(e.data===YT.PlayerState.PLAYING){
+    Object.keys(players).forEach(id=>{
+      if(id!==current) players[id].pauseVideo();
+    });
+  }
+}
+
+function track(){
+  let completed=0;
+
+  Object.keys(players).forEach((id,i)=>{
+    const p=players[id];
+    if(!p.getDuration) return;
+
+    let d=p.getDuration();
+    let percent=(p.getCurrentTime()/d)*100;
+    let saved=parseFloat(localStorage.getItem(code+"_"+id))||0;
+
+    if(percent>saved+5){
+      p.seekTo(saved/100*d,true);
+    } else {
+      localStorage.setItem(code+"_"+id,percent);
+    }
+
+    if(percent>90){
+      document.getElementById("c"+(i+1)).style.display="inline";
+      completed++;
+    }
+  });
+
+  let progress=(completed/2)*100;
+  document.getElementById("bar").style.width=progress+"%";
+  document.getElementById("percent").innerText=Math.round(progress)+"% complete";
+}
+
+function restoreState(){
+  Object.keys(players).forEach(id=>{
+    let saved=localStorage.getItem(code+"_"+id);
+    if(saved){
+      let d=players[id].getDuration();
+      players[id].seekTo(d*(saved/100),false);
+      players[id].pauseVideo();
+    }
+  });
+}
+</script>
+
+</body>
+</html>

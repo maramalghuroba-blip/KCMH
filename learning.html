@@ -39,6 +39,22 @@ header{
 .video-block{
   margin-top:15px;
 }
+
+/* Optional: Make video responsive */
+.video-wrapper {
+  position: relative;
+  padding-bottom: 56.25%; /* 16:9 ratio */
+  height: 0;
+}
+
+.video-wrapper iframe {
+  position: absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  border-radius:12px;
+}
 </style>
 </head>
 
@@ -50,34 +66,37 @@ header{
 
 <div class="container">
 
-  <!-- MINDFULNESS -->
+  <!-- MINDFULNESS MODULE -->
   <div class="module mindfulness">
     <h3>🧘 Mindfulness</h3>
     <div class="video-block">
-      <strong>Mindfulness Video</strong>
+      <strong>Mindfulness Practice</strong>
 
-      <iframe
-        width="100%"
-        height="400"
-        src="https://www.youtube.com/embed/Qs3H1GEg2o0?controls=0&modestbranding=1&rel=0&fs=0&disablekb=1&iv_load_policy=3"
-        frameborder="0"
-        allow="autoplay; encrypted-media"
-        allowfullscreen>
-      </iframe>
+      <div class="video-wrapper">
+        <iframe
+          src="https://www.youtube.com/embed/Qs3H1GEg2o0?rel=0&modestbranding=1&iv_load_policy=3"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen>
+        </iframe>
+      </div>
 
     </div>
   </div>
 
+  <!-- EMOTION REGULATION -->
   <div class="module emotion">
     <h3>🌿 Emotion Regulation</h3>
     <p>Content coming soon.</p>
   </div>
 
+  <!-- DISTRESS TOLERANCE -->
   <div class="module distress">
     <h3>🪨 Distress Tolerance</h3>
     <p>Content coming soon.</p>
   </div>
 
+  <!-- INTERPERSONAL EFFECTIVENESS -->
   <div class="module interpersonal">
     <h3>🤝 Interpersonal Effectiveness</h3>
     <p>Content coming soon.</p>
